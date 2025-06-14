@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import "../src/app/globals.css"; // make sure this imports a file with the .shake animation class
 
 const ROWS = 4;
 const COLS = 4;
@@ -24,17 +25,24 @@ function parseCoord(key: Coord): [number, number] {
 }
 
 export default function GameBoard() {
-  const [grid, setGrid] = useState<number[][]>(generateGrid);
+  const [initialGrid, setInitialGrid] = useState<number[][] | null>(null);
+  const [grid, setGrid] = useState<number[][] | null>(null);
   const [backlog, setBacklog] = useState<number[]>([]);
   const [backlogCoords, setBacklogCoords] = useState<Set<Coord>>(new Set());
   const [turns, setTurns] = useState(0);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [pressStartTime, setPressStartTime] = useState<number | null>(null);
   const [backlogActive, setBacklogActive] = useState(false); // Whether backlog sequence is active
+  const [shakeSet, setShakeSet] = useState<Set<Coord>>(new Set());
+
+  useEffect(() => {
+    const g = generateGrid();
+    setInitialGrid(g);
+    setGrid(g);
+  }, []);
 
   // Check if block is topmost in its column
   const isTopBlock = (row: number, col: number) => {
-    // TODO: box can be in backlog
     for (let r = 0; r < row; r++) {
       if (grid[r][col] !== 0) return false;
     }
@@ -43,21 +51,13 @@ export default function GameBoard() {
 
   // Return 4-neighbors of a cell
   const getNeighbors = (r: number, c: number): Coord[] => {
-    const neighbors: Coord[] = [];
     const dirs = [
-      [0, 1],
-      [1, 0],
-      [-1, 0],
-      [0, -1],
+      [0, 1], [1, 0], [-1, 0], [0, -1],
     ];
-    for (const [dr, dc] of dirs) {
-      const nr = r + dr;
-      const nc = c + dc;
-      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
-        neighbors.push(coordKey(nr, nc));
-      }
-    }
-    return neighbors;
+    return dirs
+      .map(([dr, dc]) => [r + dr, c + dc])
+      .filter(([nr, nc]) => nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS)
+      .map(([nr, nc]) => coordKey(nr, nc));
   };
 
   // Only allow adding to backlog if:
@@ -68,8 +68,8 @@ export default function GameBoard() {
   const canAddToBacklog = (row: number, col: number): boolean => {
     const key = coordKey(row, col);
     if (!isTopBlock(row, col)) {
-      const top_key = coordKey(row-1, col);
-      if(!backlogCoords.has(top_key)) return false;
+      const aboveKey = coordKey(row - 1, col);
+      if (!backlogCoords.has(aboveKey)) return false;
     }
 
     if (backlogCoords.has(key)) return false;
@@ -78,26 +78,48 @@ export default function GameBoard() {
 
     for (const b of backlogCoords) {
       const [br, bc] = parseCoord(b);
-      const neighbors = getNeighbors(br, bc);
-      if (neighbors.includes(key)) return true;
+      if (getNeighbors(br, bc).includes(key)) return true;
     }
 
     return false;
   };
+
+  const triggerShake = (key: Coord) => {
+    // Add key to shake set
+    setShakeSet(prev => {
+      const updated = new Set(prev);
+      updated.add(key);
+      return updated;
+    });
+
+    // Remove it after 500ms to end animation
+    setTimeout(() => {
+      setShakeSet(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+    }, 500);
+  };
+
 
   // On long press → attempt to add to backlog
   const handlePressStart = (row: number, col: number) => {
     setPressStartTime(Date.now());
 
     const timer = setTimeout(() => {
-      if (!canAddToBacklog(row, col)) return;
-
       const key = coordKey(row, col);
+      if (!canAddToBacklog(row, col)) {
+        triggerShake(key);
+        return;
+      }
+
       const value = grid[row][col];
       const totalWeight = backlog.reduce((a, b) => a + b, 0);
-
-      // Check if adding this value exceeds capacity
-      if (value + totalWeight > CAPACITY) return;
+      if (value + totalWeight > CAPACITY) {
+        triggerShake(key);
+        return;
+      }
 
       const newBacklog = [...backlog, value];
       const newCoords = new Set(backlogCoords);
@@ -106,12 +128,11 @@ export default function GameBoard() {
       setBacklog(newBacklog);
       setBacklogCoords(newCoords);
       setBacklogActive(true);
-    }, 500); // long press delay
+    }, 500);
 
     setLongPressTimer(timer);
   };
 
-  // Cancel long press timer
   const handlePressEnd = (row: number, col: number) => {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
@@ -120,32 +141,36 @@ export default function GameBoard() {
 
     const key = coordKey(row, col);
 
-    // If short click
     if (pressStartTime && Date.now() - pressStartTime < 500) {
-      // If backlog is active → allow only clicking backlog blocks to remove
       if (backlogActive) {
-        if (!backlogCoords.has(key)) return;
-        const newGrid = grid.map(row => [...row]);
+        if (!backlogCoords.has(key)) {
+          triggerShake(key);
+          return;
+        }
+
+        const newGrid = grid.map(r => [...r]);
         for (const b of backlogCoords) {
           const [br, bc] = parseCoord(b);
           newGrid[br][bc] = 0;
         }
-        
+
         setGrid(newGrid);
         setBacklog([]);
         setBacklogCoords(new Set());
         setBacklogActive(false);
         setTurns(turns + 1);
       } else {
-        // Normal click → attempt to vanish a top block
-        if (!isTopBlock(row, col)) return;
+        if (!isTopBlock(row, col)) {
+          triggerShake(key);
+          return;
+        }
 
         const value = grid[row][col];
-        const totalWeight = value;
+        if (value > CAPACITY) {
+          triggerShake(key);
+          return;
+        }
 
-        if (totalWeight > CAPACITY) return;
-
-        // Remove this single block
         const newGrid = grid.map((r, i) =>
           r.map((cell, j) => (i === row && j === col ? 0 : cell))
         );
@@ -158,24 +183,45 @@ export default function GameBoard() {
     setPressStartTime(null);
   };
 
-  // Reset board state
   const handleReset = () => {
-    setGrid(generateGrid());
+    setGrid(initialGrid);
     setBacklog([]);
     setBacklogCoords(new Set());
     setTurns(0);
     setBacklogActive(false);
   };
 
+  const handleResetBacklog = () => {
+    setBacklog([]);
+    setBacklogCoords(new Set());
+    setBacklogActive(false);
+  };
+
+  const handleNewGame = () => {
+    const newGrid = generateGrid();
+    setInitialGrid(newGrid);
+    setGrid(newGrid);
+    setBacklog([]);
+    setBacklogCoords(new Set());
+    setTurns(0);
+    setBacklogActive(false);
+  };
+
+  if (!grid) return null; // or a loading indicator
+
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Unstackle</h1>
-        <button
-          onClick={handleReset}
-          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-        >
+    <div className="p-6 flex flex-col items-center">
+      <h1 className="text-4xl font-black mb-4 tracking-wide font-mono">UNSTACKLE</h1>
+
+      <div className="flex space-x-3 mb-6">
+        <button onClick={handleReset} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
           Reset
+        </button>
+        <button onClick={handleResetBacklog} className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">
+          Reset Backlog
+        </button>
+        <button onClick={handleNewGame} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+          New Game
         </button>
       </div>
 
@@ -184,22 +230,19 @@ export default function GameBoard() {
           row.map((cell, j) => {
             const key = coordKey(i, j);
             const inBacklog = backlogCoords.has(key);
+            const isShaking = shakeSet.has(key);
 
             return (
               <div
                 key={key}
                 onMouseDown={() => handlePressStart(i, j)}
                 onMouseUp={() => handlePressEnd(i, j)}
-                className={`w-16 h-16 text-lg font-semibold flex items-center justify-center border rounded select-none transition
-                  ${
-                    cell === 0
-                      ? "bg-gray-200 text-gray-500"
-                      : inBacklog
-                      ? "bg-yellow-400 text-black"
-                      // : isTopBlock(i, j)
-                      : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700"
-                      // : "bg-gray-400 text-white"
-                  }`}
+                className={`w-16 h-16 text-lg font-bold flex items-center justify-center border rounded select-none transition
+                  ${cell === 0 ? "bg-gray-200 text-gray-500"
+                    : inBacklog ? "bg-yellow-400 text-black"
+                    : "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"}
+                  ${isShaking ? "shake" : ""}
+                `}
               >
                 {cell !== 0 ? cell : ""}
               </div>
@@ -208,10 +251,9 @@ export default function GameBoard() {
         )}
       </div>
 
-      <div className="mt-4 space-y-1">
+      <div className="mt-4 space-y-1 text-center">
         <p>
-          Backlog:{" "}
-          {backlog.length > 0
+          Backlog: {backlog.length > 0
             ? backlog.join(", ") + ` (Total: ${backlog.reduce((a, b) => a + b, 0)} / ${CAPACITY})`
             : "Empty"}
         </p>

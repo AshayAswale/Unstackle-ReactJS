@@ -1,5 +1,7 @@
-// pages/index.tsx
-import GameBoard from '@/../components/GameBoard';
+// src/app/page.tsx
+"use client";
+
+import GameBoard from "../../components/GameBoard";
 
 export default function Home() {
   return (
