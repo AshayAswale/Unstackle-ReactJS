@@ -34,6 +34,7 @@ export default function GameBoard() {
 
   // Check if block is topmost in its column
   const isTopBlock = (row: number, col: number) => {
+    // TODO: box can be in backlog
     for (let r = 0; r < row; r++) {
       if (grid[r][col] !== 0) return false;
     }
@@ -61,11 +62,16 @@ export default function GameBoard() {
 
   // Only allow adding to backlog if:
   // - block is a top block
+  // - Otherwise, block above it must be in backlog
   // - block is a neighbor of existing backlog block
   // - or it is the first block in the backlog
   const canAddToBacklog = (row: number, col: number): boolean => {
     const key = coordKey(row, col);
-    if (!isTopBlock(row, col)) return false;
+    if (!isTopBlock(row, col)) {
+      const top_key = coordKey(row-1, col);
+      if(!backlogCoords.has(top_key)) return false;
+    }
+
     if (backlogCoords.has(key)) return false;
 
     if (backlogCoords.size === 0) return true;
@@ -119,25 +125,17 @@ export default function GameBoard() {
       // If backlog is active → allow only clicking backlog blocks to remove
       if (backlogActive) {
         if (!backlogCoords.has(key)) return;
-
-        const newCoords = new Set(backlogCoords);
-        const newBacklog = [...backlog];
-
-        // Remove index from coords & value from backlog
-        const [r, c] = parseCoord(key);
-        const value = grid[r][c];
-        const index = newBacklog.lastIndexOf(value);
-
-        if (index !== -1) newBacklog.splice(index, 1);
-        newCoords.delete(key);
-
-        setBacklog(newBacklog);
-        setBacklogCoords(newCoords);
-
-        // If all removed, disable backlog mode
-        if (newCoords.size === 0) {
-          setBacklogActive(false);
+        const newGrid = grid.map(row => [...row]);
+        for (const b of backlogCoords) {
+          const [br, bc] = parseCoord(b);
+          newGrid[br][bc] = 0;
         }
+        
+        setGrid(newGrid);
+        setBacklog([]);
+        setBacklogCoords(new Set());
+        setBacklogActive(false);
+        setTurns(turns + 1);
       } else {
         // Normal click → attempt to vanish a top block
         if (!isTopBlock(row, col)) return;
@@ -198,9 +196,9 @@ export default function GameBoard() {
                       ? "bg-gray-200 text-gray-500"
                       : inBacklog
                       ? "bg-yellow-400 text-black"
-                      : isTopBlock(i, j)
-                      ? "bg-blue-600 text-white cursor-pointer hover:bg-blue-700"
-                      : "bg-gray-400 text-white"
+                      // : isTopBlock(i, j)
+                      : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700"
+                      // : "bg-gray-400 text-white"
                   }`}
               >
                 {cell !== 0 ? cell : ""}
