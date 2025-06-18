@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  basePath: '/unstackle',
+  assetPrefix: '/unstackle',
+  trailingSlash: true,
+  output: 'export',
+  distDir: 'build'
 };
 
-export default nextConfig;
+module.exports = nextConfig;
