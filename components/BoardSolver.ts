@@ -88,8 +88,8 @@ function Solve(grid: Grid, CAPACITY: number): number {
 
     function getHeuristicCost(updated_grid: Grid, remaining_capacity: number): number {
         let total = 0;
-        for (let row of updated_grid) {
-            for (let v of row) {
+        for (const row of updated_grid) {
+            for (const v of row) {
                 total += v;
             }
         }
@@ -141,7 +141,7 @@ function Solve(grid: Grid, CAPACITY: number): number {
 
         const nodes_to_add: [Coord, boolean][] = [];
 
-        for (let [dx, dy] of directions) {
+        for (const [dx, dy] of directions) {
             const nx = x + dx;
             const ny = y + dy;
             if (isInvalid(nx, ny)) continue;
@@ -156,7 +156,7 @@ function Solve(grid: Grid, CAPACITY: number): number {
             nodes_to_add.push([[nx, ny], true]);
         }
 
-        for (let [[nx, ny], reset] of nodes_to_add) {
+        for (const [[nx, ny], reset] of nodes_to_add) {
             const cluster = curr_allocation[`${x},${y}`];
             const next_grid = deepCopyGrid(curr_grid);
             const next_allocation: Allocation = { ...curr_allocation };
