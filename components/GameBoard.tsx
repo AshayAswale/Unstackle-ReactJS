@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import "../src/app/globals.css"; // make sure this imports a file with the .shake animation class
+import Solve from "./BoardSolver";  // make sure you import your Solver
 
 const ROWS = 4;
 const COLS = 4;
@@ -34,11 +35,13 @@ export default function GameBoard() {
   const [pressStartTime, setPressStartTime] = useState<number | null>(null);
   const [backlogActive, setBacklogActive] = useState(false); // Whether backlog sequence is active
   const [shakeSet, setShakeSet] = useState<Set<Coord>>(new Set());
+  const [optimal, setOptimal] = useState<number | null>(null);
 
   useEffect(() => {
     const g = generateGrid();
     setInitialGrid(g);
     setGrid(g);
+    setOptimal(Solve(g, CAPACITY));
   }, []);
 
   // Check if block is topmost in its column
@@ -208,6 +211,7 @@ export default function GameBoard() {
     setBacklogCoords(new Set());
     setTurns(0);
     setBacklogActive(false);
+    setOptimal(Solve(newGrid, CAPACITY));
   };
 
   if (!grid) return null; // or a loading indicator
@@ -261,6 +265,9 @@ export default function GameBoard() {
             : "Empty"}
         </p>
         <p>Turns Taken: {turns}</p>
+        {optimal !== null && (
+        <p>Challenge: {optimal} moves</p>
+        )}
       </div>
     </div>
   );
