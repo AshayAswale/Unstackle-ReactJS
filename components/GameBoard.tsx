@@ -31,8 +31,6 @@ export default function GameBoard() {
   const [backlog, setBacklog] = useState<number[]>([]);
   const [backlogCoords, setBacklogCoords] = useState<Set<Coord>>(new Set());
   const [turns, setTurns] = useState(0);
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
-  const [pressStartTime, setPressStartTime] = useState<number | null>(null);
   const [backlogActive, setBacklogActive] = useState(false); // Whether backlog sequence is active
   const [shakeSet, setShakeSet] = useState<Set<Coord>>(new Set());
   const [optimal, setOptimal] = useState<number | null>(null);
@@ -112,46 +110,11 @@ export default function GameBoard() {
 
 
   // On long press → attempt to add to backlog
-  const handlePressStart = (row: number, col: number) => {
+  const handleClick = (row: number, col: number) => {
     if (!grid) return false; // Defensive: grid not ready yet
-    setPressStartTime(Date.now());
-
-    const timer = setTimeout(() => {
-      const key = coordKey(row, col);
-      if (!canAddToBacklog(row, col)) {
-        triggerShake(key);
-        return;
-      }
-
-      const value = grid[row][col];
-      const totalWeight = backlog.reduce((a, b) => a + b, 0);
-      if (value + totalWeight > CAPACITY) {
-        triggerShake(key);
-        return;
-      }
-
-      const newBacklog = [...backlog, value];
-      const newCoords = new Set(backlogCoords);
-      newCoords.add(key);
-
-      setBacklog(newBacklog);
-      setBacklogCoords(newCoords);
-      setBacklogActive(true);
-    }, 500);
-
-    setLongPressTimer(timer);
-  };
-
-  const handlePressEnd = (row: number, col: number) => {
-    if (!grid) return false; // Defensive: grid not ready yet
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      setLongPressTimer(null);
-    }
-
     const key = coordKey(row, col);
-
-    if (pressStartTime && Date.now() - pressStartTime < 500) {
+    // if in backlog, execute this:
+    if (backlogCoords.has(key)) {
       if (backlogActive) {
         if (!backlogCoords.has(key)) {
           triggerShake(key);
@@ -189,9 +152,30 @@ export default function GameBoard() {
         setTurns(turns + 1);
       }
     }
+    // if not in backlog, execute this
+    else {
+      if (!canAddToBacklog(row, col)) {
+        triggerShake(key);
+        return;
+      }
 
-    setPressStartTime(null);
+      const value = grid[row][col];
+      const totalWeight = backlog.reduce((a, b) => a + b, 0);
+      if (value + totalWeight > CAPACITY) {
+        triggerShake(key);
+        return;
+      }
+
+      const newBacklog = [...backlog, value];
+      const newCoords = new Set(backlogCoords);
+      newCoords.add(key);
+
+      setBacklog(newBacklog);
+      setBacklogCoords(newCoords);
+      setBacklogActive(true);
+    }
   };
+
 
   const handleReset = () => {
     setGrid(initialGrid);
@@ -264,8 +248,7 @@ export default function GameBoard() {
             return (
               <div
                 key={key}
-                onMouseDown={() => handlePressStart(i, j)}
-                onMouseUp={() => handlePressEnd(i, j)}
+                onClick={() => handleClick(i, j)}
                 className={`w-16 h-16 text-lg font-bold flex items-center justify-center border rounded select-none transition
                   ${cell === 0 ? "bg-gray-200 text-gray-500"
                     : inBacklog ? "bg-yellow-400 text-black"
