@@ -44,6 +44,10 @@ export default function GameBoard() {
     setOptimal(Solve(g, CAPACITY));
   }, []);
 
+  const isGridEmpty = () => {
+    return grid?.every(row => row.every(cell => cell === 0));
+  };
+
   // Check if block is topmost in its column
   const isTopBlock = (row: number, col: number) => {
     if (!grid) return false; // Defensive: grid not ready yet
@@ -219,7 +223,25 @@ export default function GameBoard() {
   return (
     <div className="p-6 flex flex-col items-center">
       <h1 className="text-4xl font-black mb-4 tracking-wide font-mono">UNSTACKLE</h1>
+      {isGridEmpty() ? (
+    <>
+      <p className={`text-3xl font-bold mb-4 ${turns <= (optimal ?? 0) ? 'text-green-600' : 'text-red-600'}`}>
+        {turns <= (optimal ?? 0) ? 'YOU WIN!' : 'TRY AGAIN'}
+      </p>
 
+      <div className="flex space-x-3">
+        {turns > (optimal ?? 0) && (
+          <button onClick={handleReset} className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">
+            Try Again
+          </button>
+        )}
+        <button onClick={handleNewGame} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+          New Game
+        </button>
+      </div>
+    </>
+  ) : (
+    <>
       <div className="flex space-x-3 mb-6">
         <button onClick={handleReset} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
           Reset
@@ -269,6 +291,8 @@ export default function GameBoard() {
         <p>Challenge: {optimal} moves</p>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
