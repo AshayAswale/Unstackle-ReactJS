@@ -1,18 +1,14 @@
 {
-  "name": "unstackle",
+  "name": "unstackle-reactjs",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://ashayaswale.github.io/unstackle",
   "scripts": {
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
-    "export": "next export",
-    "build:gh": "npm run build && npm run export"
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "gh-pages": "^6.3.0",
     "next": "15.3.3",
     "postcss": "^8.5.5",
     "react": "^19.0.0",

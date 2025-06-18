@@ -43,7 +43,6 @@ export default function GameBoard() {
 
   // Check if block is topmost in its column
   const isTopBlock = (row: number, col: number) => {
-  if (!grid) return false; // Defensive: grid not ready yet
     for (let r = 0; r < row; r++) {
       if (grid[r][col] !== 0) return false;
     }
@@ -106,7 +105,6 @@ export default function GameBoard() {
 
   // On long press → attempt to add to backlog
   const handlePressStart = (row: number, col: number) => {
-    if (!grid) return false; // Defensive: grid not ready yet
     setPressStartTime(Date.now());
 
     const timer = setTimeout(() => {
@@ -136,7 +134,6 @@ export default function GameBoard() {
   };
 
   const handlePressEnd = (row: number, col: number) => {
-    if (!grid) return false; // Defensive: grid not ready yet
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
