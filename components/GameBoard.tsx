@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import "../src/app/globals.css"; // make sure this imports a file with the .shake animation class
+import Solve from "./BoardSolver";  // make sure you import your Solver
 
 const ROWS = 4;
 const COLS = 4;
@@ -30,16 +31,20 @@ export default function GameBoard() {
   const [backlog, setBacklog] = useState<number[]>([]);
   const [backlogCoords, setBacklogCoords] = useState<Set<Coord>>(new Set());
   const [turns, setTurns] = useState(0);
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
-  const [pressStartTime, setPressStartTime] = useState<number | null>(null);
   const [backlogActive, setBacklogActive] = useState(false); // Whether backlog sequence is active
   const [shakeSet, setShakeSet] = useState<Set<Coord>>(new Set());
+  const [optimal, setOptimal] = useState<number | null>(null);
 
   useEffect(() => {
     const g = generateGrid();
     setInitialGrid(g);
     setGrid(g);
+    setOptimal(Solve(g, CAPACITY));
   }, []);
+
+  const isGridEmpty = () => {
+    return grid?.every(row => row.every(cell => cell === 0));
+  };
 
   // Check if block is topmost in its column
   const isTopBlock = (row: number, col: number) => {
@@ -105,46 +110,11 @@ export default function GameBoard() {
 
 
   // On long press → attempt to add to backlog
-  const handlePressStart = (row: number, col: number) => {
+  const handleClick = (row: number, col: number) => {
     if (!grid) return false; // Defensive: grid not ready yet
-    setPressStartTime(Date.now());
-
-    const timer = setTimeout(() => {
-      const key = coordKey(row, col);
-      if (!canAddToBacklog(row, col)) {
-        triggerShake(key);
-        return;
-      }
-
-      const value = grid[row][col];
-      const totalWeight = backlog.reduce((a, b) => a + b, 0);
-      if (value + totalWeight > CAPACITY) {
-        triggerShake(key);
-        return;
-      }
-
-      const newBacklog = [...backlog, value];
-      const newCoords = new Set(backlogCoords);
-      newCoords.add(key);
-
-      setBacklog(newBacklog);
-      setBacklogCoords(newCoords);
-      setBacklogActive(true);
-    }, 500);
-
-    setLongPressTimer(timer);
-  };
-
-  const handlePressEnd = (row: number, col: number) => {
-    if (!grid) return false; // Defensive: grid not ready yet
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      setLongPressTimer(null);
-    }
-
     const key = coordKey(row, col);
-
-    if (pressStartTime && Date.now() - pressStartTime < 500) {
+    // if in backlog, execute this:
+    if (backlogCoords.has(key)) {
       if (backlogActive) {
         if (!backlogCoords.has(key)) {
           triggerShake(key);
@@ -182,9 +152,30 @@ export default function GameBoard() {
         setTurns(turns + 1);
       }
     }
+    // if not in backlog, execute this
+    else {
+      if (!canAddToBacklog(row, col)) {
+        triggerShake(key);
+        return;
+      }
 
-    setPressStartTime(null);
+      const value = grid[row][col];
+      const totalWeight = backlog.reduce((a, b) => a + b, 0);
+      if (value + totalWeight > CAPACITY) {
+        triggerShake(key);
+        return;
+      }
+
+      const newBacklog = [...backlog, value];
+      const newCoords = new Set(backlogCoords);
+      newCoords.add(key);
+
+      setBacklog(newBacklog);
+      setBacklogCoords(newCoords);
+      setBacklogActive(true);
+    }
   };
+
 
   const handleReset = () => {
     setGrid(initialGrid);
@@ -208,6 +199,7 @@ export default function GameBoard() {
     setBacklogCoords(new Set());
     setTurns(0);
     setBacklogActive(false);
+    setOptimal(Solve(newGrid, CAPACITY));
   };
 
   if (!grid) return null; // or a loading indicator
@@ -215,7 +207,25 @@ export default function GameBoard() {
   return (
     <div className="p-6 flex flex-col items-center">
       <h1 className="text-4xl font-black mb-4 tracking-wide font-mono">UNSTACKLE</h1>
+      {isGridEmpty() ? (
+    <>
+      <p className={`text-3xl font-bold mb-4 ${turns <= (optimal ?? 0) ? 'text-green-600' : 'text-red-600'}`}>
+        {turns <= (optimal ?? 0) ? 'YOU WIN!' : 'TRY AGAIN'}
+      </p>
 
+      <div className="flex space-x-3">
+        {turns > (optimal ?? 0) && (
+          <button onClick={handleReset} className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">
+            Try Again
+          </button>
+        )}
+        <button onClick={handleNewGame} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+          New Game
+        </button>
+      </div>
+    </>
+  ) : (
+    <>
       <div className="flex space-x-3 mb-6">
         <button onClick={handleReset} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
           Reset
@@ -238,8 +248,7 @@ export default function GameBoard() {
             return (
               <div
                 key={key}
-                onMouseDown={() => handlePressStart(i, j)}
-                onMouseUp={() => handlePressEnd(i, j)}
+                onClick={() => handleClick(i, j)}
                 className={`w-16 h-16 text-lg font-bold flex items-center justify-center border rounded select-none transition
                   ${cell === 0 ? "bg-gray-200 text-gray-500"
                     : inBacklog ? "bg-yellow-400 text-black"
@@ -261,7 +270,12 @@ export default function GameBoard() {
             : "Empty"}
         </p>
         <p>Turns Taken: {turns}</p>
+        {optimal !== null && (
+        <p>Challenge: {optimal} moves</p>
+        )}
       </div>
+      </>
+      )}
     </div>
   );
 }
