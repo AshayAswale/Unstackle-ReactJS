@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function HowToPlay() {
   return (
     <div className="p-6 max-w-3xl mx-auto bg-white text-black">
@@ -36,7 +38,7 @@ export default function HowToPlay() {
               <li>New boxes must be direct neighbors (up, down, left, right) of existing backlog boxes.</li>
               <li>If a box is not on top, its immediate above box must already be in the backlog.</li>
               <li>The total weight of all backlog boxes cannot exceed your 6-unit capacity.</li>
-              <li>The current weight is shown as <strong>"Total"</strong> after the Backlog information</li>
+              <li>The current weight is shown as <strong>&quot;Total&quot;</strong> after the Backlog information</li>
             </ul>
             <li>Backlog boxes will turn yellow as they are selected.</li>
           </ul>
@@ -62,7 +64,7 @@ export default function HowToPlay() {
         <h2 className="text-2xl font-semibold mb-2">Winning Condition</h2>
         <p>
         <ul className="list-disc list-inside">
-          <li>The game calculates the <strong>optimal number of moves</strong> using a solver. This number is shown as <strong>"Challenge"</strong>. </li>
+          <li>The game calculates the <strong>optimal number of moves</strong> using a solver. This number is shown as <strong>&quot;Challenge&quot;</strong>. </li>
           <li>You win if you clear the grid in that many turns or fewer!</li>
         </ul>
         </p>
@@ -79,7 +81,7 @@ export default function HowToPlay() {
       </section>
 
       <div className="text-center mt-8">
-        <a href="/" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-lg font-semibold transition">Back to Game</a>
+        <Link href="/" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-lg font-semibold transition">Back to Game</Link>
       </div>
     </div>
   );
