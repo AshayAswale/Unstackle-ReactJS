@@ -226,6 +226,12 @@ export default function GameBoard() {
     </>
   ) : (
     <>
+    <div className="mb-4">
+      <a href="/tutorial" className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+        How to Play
+      </a>
+    </div>
+
       <div className="flex space-x-3 mb-6">
         <button onClick={handleReset} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
           Reset
