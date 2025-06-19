@@ -255,14 +255,27 @@ export default function GameBoard() {
               <div
                 key={key}
                 onClick={() => handleClick(i, j)}
-                className={`w-16 h-16 text-lg font-bold flex items-center justify-center border rounded select-none transition
-                  ${cell === 0 ? "bg-gray-200 text-gray-500"
-                    : inBacklog ? "bg-yellow-400 text-black"
-                    : "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"}
-                  ${isShaking ? "shake" : ""}
-                `}
+                className={`w-16 h-16 relative border rounded select-none transition ${isShaking ? "shake" : ""}`}
               >
-                {cell !== 0 ? cell : ""}
+                {cell !== 0 && (
+                  <>
+                    <img
+                      src={`/assets/${cell}.png`}
+                      alt={`Box ${cell}`}
+                      className="w-full h-full object-cover rounded"
+                    />
+                    {inBacklog && (
+                      <img
+                        src={`/assets/tape.png`}
+                        alt="Backlog Tape"
+                        className="absolute top-0 left-0 w-full h-full object-cover rounded"
+                      />
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center text-black font-bold text-xl">
+                      {cell}
+                    </div>
+                  </>
+                )}
               </div>
             );
           })
