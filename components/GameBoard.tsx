@@ -34,7 +34,7 @@ export default function GameBoard() {
   const [backlogActive, setBacklogActive] = useState(false); // Whether backlog sequence is active
   const [shakeSet, setShakeSet] = useState<Set<Coord>>(new Set());
   const [optimal, setOptimal] = useState<number | null>(null);
-  const workerRef = useRef<Worker>(); // Ref to store the Web Worker
+  const workerRef = useRef<Worker | null>(null);  // allow Worker or null
 
   useEffect(() => {
     // Initialize the Web Worker

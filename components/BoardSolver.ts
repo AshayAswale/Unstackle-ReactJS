@@ -95,7 +95,7 @@ function Solve(grid: Grid, CAPACITY: number): number {
       while (visited.size < ROWS*COLS) {
         groups++;
         while (visited.has(coordKey(root))) {
-          let [x, y] = root;
+          const [x, y] = root;
           root=[x,y+1];
           if (isInvalid(root[0], root[1])) {
             root = [x+1, 0];
@@ -172,7 +172,6 @@ function Solve(grid: Grid, CAPACITY: number): number {
     }
 
     let final_cost = getUpperLimit(grid, CAPACITY);
-    let answer: Allocation = {};
     while (!heap.isEmpty()) {
       const popped = heap.pop();
       if (!popped) break;
@@ -219,7 +218,6 @@ function Solve(grid: Grid, CAPACITY: number): number {
             if (isFinished) {
                 if (next_cost < final_cost) {
                     final_cost = next_cost;
-                    answer = next_allocation;
                 }
                 continue;
             }
