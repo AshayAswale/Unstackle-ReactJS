@@ -278,10 +278,14 @@ export default function GameBoard() {
               >
                 {cell !== 0 && (
                   <>
-                    <img
-                      src={`/assets/${cell}.png`}
-                      alt={`Box ${cell}`}
-                      className="w-full h-full object-cover rounded"
+                    <div
+                      className="absolute top-0 left-0 w-full h-full rounded"
+                      style={{
+                        backgroundColor: cell === 1 ? "#fccca2" :
+                                        cell === 2 ? "#e8a264" :
+                                        cell === 3 ? "#bf8552" :
+                                        "#966035"
+                      }}
                     />
                     {inBacklog && (
                       <img
