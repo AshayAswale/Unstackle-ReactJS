@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import "../src/app/globals.css"; // make sure this imports a file with the .shake animation class
 import Solve from "./BoardSolver";  // make sure you import your Solver
 
-const ROWS = 4;
-const COLS = 4;
+const ROWS = 6;
+const COLS = 6;
 const CAPACITY = 6;
 
 function generateGrid() {
@@ -244,7 +244,9 @@ export default function GameBoard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid gap-2"
+      style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
+      >
         {grid.map((row, i) =>
           row.map((cell, j) => {
             const key = coordKey(i, j);
