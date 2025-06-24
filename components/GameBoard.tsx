@@ -1,8 +1,8 @@
+// components/GameBoard.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "../src/app/globals.css"; // make sure this imports a file with the .shake animation class
-import Solve from "./BoardSolver";  // make sure you import your Solver
 
 const ROWS = 6;
 const COLS = 6;
@@ -34,12 +34,28 @@ export default function GameBoard() {
   const [backlogActive, setBacklogActive] = useState(false); // Whether backlog sequence is active
   const [shakeSet, setShakeSet] = useState<Set<Coord>>(new Set());
   const [optimal, setOptimal] = useState<number | null>(null);
+  const workerRef = useRef<Worker>(); // Ref to store the Web Worker
 
   useEffect(() => {
+    // Initialize the Web Worker
+    workerRef.current = new Worker(new URL('./BoardSolver.ts', import.meta.url));
+    console.log('Worker initialized')
+    workerRef.current.onmessage = (event: MessageEvent<number>) => {
+      setOptimal(event.data);
+    };
+    console.log('Solve requested')
+
     const g = generateGrid();
     setInitialGrid(g);
     setGrid(g);
-    setOptimal(Solve(g, CAPACITY));
+
+    // Send the grid to the worker for solving
+    workerRef.current.postMessage({ grid: g, capacity: CAPACITY });
+
+    // Cleanup worker on unmount
+    return () => {
+      workerRef.current?.terminate();
+    };
   }, []);
 
   const isGridEmpty = () => {
@@ -199,7 +215,8 @@ export default function GameBoard() {
     setBacklogCoords(new Set());
     setTurns(0);
     setBacklogActive(false);
-    setOptimal(Solve(newGrid, CAPACITY));
+    setOptimal(null); // Reset optimal until worker provides a new one
+    workerRef.current?.postMessage({ grid: newGrid, capacity: CAPACITY }); // Send new grid to worker
   };
 
   if (!grid) return null; // or a loading indicator
@@ -291,8 +308,10 @@ export default function GameBoard() {
             : "Empty"}
         </p>
         <p>Turns Taken: {turns}</p>
-        {optimal !== null && (
-        <p>Challenge: {optimal} moves</p>
+        {optimal !== null ? (
+          <p>Challenge: {optimal} moves</p>
+        ) : (
+          <p>Calculating optimal moves...</p> // Indicate that it's being calculated
         )}
       </div>
       </>

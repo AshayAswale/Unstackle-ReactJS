@@ -231,4 +231,9 @@ function Solve(grid: Grid, CAPACITY: number): number {
     return final_cost;
 }
 
-export default Solve;
+onmessage = function (e) {
+  console.log('Worker Calculating INSIDE SOLVER')
+  const { grid, capacity } = e.data;
+  const result = Solve(grid, capacity);
+  postMessage(result);
+};
