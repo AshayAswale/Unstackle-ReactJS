@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import "../src/app/globals.css"; // make sure this imports a file with the .shake animation class
-import { Console } from "console";
 
 
 export default function GameBoard({ ROWS, COLS }: { ROWS: number, COLS: number }) {
@@ -223,7 +222,10 @@ export default function GameBoard({ ROWS, COLS }: { ROWS: number, COLS: number }
 
   return (
     <div className="p-6 flex flex-col items-center">
-      <h1 className="text-4xl font-black mb-4 tracking-wide font-mono">UNSTACKLE</h1>
+      <h1 className="text-6xl font-black mb-4 tracking-wide font-mono hover:text-blue-600 transition-colors cursor-pointer"
+        onClick={() => window.location.reload()}>
+        UNSTACKLE
+      </h1>
       {isGridEmpty() ? (
     <>
       <p className={`text-3xl font-bold mb-4 ${turns <= (optimal ?? 0) ? 'text-green-600' : 'text-red-600'}`}>
