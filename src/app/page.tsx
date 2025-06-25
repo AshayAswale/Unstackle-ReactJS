@@ -1,12 +1,12 @@
 // src/app/page.tsx
 "use client";
 
-import GameBoard from "../../components/GameBoard";
+import DifficultyPage from "../../components/DifficultyPage";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-white flex items-center justify-center">
-      <GameBoard />
+      <DifficultyPage />
     </main>
   );
 }

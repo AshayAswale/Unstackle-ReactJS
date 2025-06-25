@@ -3,29 +3,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import "../src/app/globals.css"; // make sure this imports a file with the .shake animation class
+import { Console } from "console";
 
-const ROWS = 6;
-const COLS = 6;
-const CAPACITY = 6;
 
-function generateGrid() {
-  return Array.from({ length: ROWS }, () =>
-    Array.from({ length: COLS }, () => Math.floor(Math.random() * 4) + 1)
-  );
-}
-
-type Coord = `${number},${number}`;
-
-function coordKey(row: number, col: number): Coord {
-  return `${row},${col}`;
-}
-
-function parseCoord(key: Coord): [number, number] {
-  const [r, c] = key.split(",").map(Number);
-  return [r, c];
-}
-
-export default function GameBoard() {
+export default function GameBoard({ ROWS, COLS }: { ROWS: number, COLS: number }) {
+  console.log("Grid ", ROWS, "x", COLS)
+  const CAPACITY = 6;
   const [initialGrid, setInitialGrid] = useState<number[][] | null>(null);
   const [grid, setGrid] = useState<number[][] | null>(null);
   const [backlog, setBacklog] = useState<number[]>([]);
@@ -35,6 +18,23 @@ export default function GameBoard() {
   const [shakeSet, setShakeSet] = useState<Set<Coord>>(new Set());
   const [optimal, setOptimal] = useState<number | null>(null);
   const workerRef = useRef<Worker | null>(null);  // allow Worker or null
+
+  function generateGrid() {
+    return Array.from({ length: ROWS }, () =>
+      Array.from({ length: COLS }, () => Math.floor(Math.random() * 4) + 1)
+    );
+  }
+
+  type Coord = `${number},${number}`;
+
+  function coordKey(row: number, col: number): Coord {
+    return `${row},${col}`;
+  }
+
+  function parseCoord(key: Coord): [number, number] {
+    const [r, c] = key.split(",").map(Number);
+    return [r, c];
+  }
 
   useEffect(() => {
     // Initialize the Web Worker
