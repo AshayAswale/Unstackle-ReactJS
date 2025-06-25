@@ -17,7 +17,7 @@ export default function GameBoard({ ROWS, COLS }: { ROWS: number, COLS: number }
   const [shakeSet, setShakeSet] = useState<Set<Coord>>(new Set());
   const [optimal, setOptimal] = useState<number | null>(null);
   const [quicksol, setQuickSol] = useState<boolean | null>(null);
-  const workerRef = useRef<Worker | null>(null);  // allow Worker or null
+  const startWorker = useSolverWorker(setOptimal, setQuickSol);
 
   function generateGrid() {
     return Array.from({ length: ROWS }, () =>
@@ -36,28 +36,35 @@ export default function GameBoard({ ROWS, COLS }: { ROWS: number, COLS: number }
     return [r, c];
   }
 
-  useEffect(() => {
-    // Initialize the Web Worker
-    workerRef.current = new Worker(new URL('./BoardSolver.ts', import.meta.url));
-    console.log('Worker initialized')
-    workerRef.current.onmessage = (event: MessageEvent<[number, boolean]>) => {
-    const [result, quick_sol] = event.data;
-    setOptimal(result);
-    setQuickSol(quick_sol);
-    };
-    console.log('Solve requested')
+function useSolverWorker(setOptimal: (n: number) => void, setQuickSol: (b: boolean) => void) {
+  const workerRef = useRef<Worker | null>(null);
 
+  const startWorker = (grid: number[][]) => {
+    workerRef.current?.terminate();
+    workerRef.current = new Worker(new URL('./BoardSolver.ts', import.meta.url));
+    workerRef.current.onmessage = (event: MessageEvent<[number, boolean]>) => {
+      const [result, quick_sol] = event.data;
+      setOptimal(result);
+      setQuickSol(quick_sol);
+    };
+    workerRef.current.postMessage({ grid, capacity: CAPACITY });
+  };
+
+  useEffect(() => {
+    return () => {
+      workerRef.current?.terminate();  // Clean up on component unmount
+    };
+  }, []);
+
+  return startWorker;
+}
+
+
+  useEffect(() => {
     const g = generateGrid();
     setInitialGrid(g);
     setGrid(g);
-
-    // Send the grid to the worker for solving
-    workerRef.current.postMessage({ grid: g, capacity: CAPACITY });
-
-    // Cleanup worker on unmount
-    return () => {
-      workerRef.current?.terminate();
-    };
+    startWorker(g);
   }, []);
 
   const isGridEmpty = () => {
@@ -218,7 +225,9 @@ export default function GameBoard({ ROWS, COLS }: { ROWS: number, COLS: number }
     setTurns(0);
     setBacklogActive(false);
     setOptimal(null); // Reset optimal until worker provides a new one
-    workerRef.current?.postMessage({ grid: newGrid, capacity: CAPACITY }); // Send new grid to worker
+    setQuickSol(false);
+    
+    startWorker(newGrid);
   };
 
   if (!grid) return null; // or a loading indicator
