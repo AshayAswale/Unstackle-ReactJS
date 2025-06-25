@@ -16,6 +16,7 @@ export default function GameBoard({ ROWS, COLS }: { ROWS: number, COLS: number }
   const [backlogActive, setBacklogActive] = useState(false); // Whether backlog sequence is active
   const [shakeSet, setShakeSet] = useState<Set<Coord>>(new Set());
   const [optimal, setOptimal] = useState<number | null>(null);
+  const [quicksol, setQuickSol] = useState<boolean | null>(null);
   const workerRef = useRef<Worker | null>(null);  // allow Worker or null
 
   function generateGrid() {
@@ -39,8 +40,10 @@ export default function GameBoard({ ROWS, COLS }: { ROWS: number, COLS: number }
     // Initialize the Web Worker
     workerRef.current = new Worker(new URL('./BoardSolver.ts', import.meta.url));
     console.log('Worker initialized')
-    workerRef.current.onmessage = (event: MessageEvent<number>) => {
-      setOptimal(event.data);
+    workerRef.current.onmessage = (event: MessageEvent<[number, boolean]>) => {
+    const [result, quick_sol] = event.data;
+    setOptimal(result);
+    setQuickSol(quick_sol);
     };
     console.log('Solve requested')
 
@@ -315,7 +318,7 @@ export default function GameBoard({ ROWS, COLS }: { ROWS: number, COLS: number }
         </p>
         <p>Turns Taken: {turns}</p>
         {optimal !== null ? (
-          <p>Challenge: {optimal} moves</p>
+          <p>Challenge: {optimal} moves {quicksol ? '' : '(Optimal)'}</p>
         ) : (
           <p>Calculating optimal moves...</p> // Indicate that it's being calculated
         )}

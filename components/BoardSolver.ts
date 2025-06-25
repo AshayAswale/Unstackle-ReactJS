@@ -64,7 +64,7 @@ class PriorityQueue<T> {
     }
 }
 
-function Solve(grid: Grid, CAPACITY: number): number {
+function Solve(grid: Grid, CAPACITY: number, quick_solution: boolean): number {
     const ROWS = grid.length;
     const COLS = grid[0].length;
     const directions: Coord[] = [[0, -1], [0, 1], [1, 0], [-1, 0]];
@@ -172,6 +172,10 @@ function Solve(grid: Grid, CAPACITY: number): number {
     }
 
     let final_cost = getUpperLimit(grid, CAPACITY);
+
+    if (quick_solution)
+      return final_cost;
+
     while (!heap.isEmpty()) {
       const popped = heap.pop();
       if (!popped) break;
@@ -232,6 +236,8 @@ function Solve(grid: Grid, CAPACITY: number): number {
 onmessage = function (e) {
   console.log('Worker Calculating INSIDE SOLVER')
   const { grid, capacity } = e.data;
-  const result = Solve(grid, capacity);
-  postMessage(result);
+  let result = Solve(grid, capacity, true);
+  postMessage([result, true]);
+  result = Solve(grid, capacity, false);
+  postMessage([result, false]);
 };
