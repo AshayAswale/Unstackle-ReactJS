@@ -64,10 +64,10 @@ class PriorityQueue<T> {
     }
 }
 
-function Solve(grid: Grid, CAPACITY: number): number {
+function Solve(grid: Grid, CAPACITY: number, quick_solution: boolean): number {
     const ROWS = grid.length;
     const COLS = grid[0].length;
-    const directions: Coord[] = [[0, 1], [0, -1], [-1, 0], [1, 0]];
+    const directions: Coord[] = [[0, -1], [0, 1], [1, 0], [-1, 0]];
 
     function isInvalid(x: number, y: number): boolean {
         return x < 0 || y < 0 || x >= ROWS || y >= COLS;
@@ -77,6 +77,56 @@ function Solve(grid: Grid, CAPACITY: number): number {
         if (x === 0) return true;
         if (curr_grid[x][y] === 0) return false;
         return curr_grid[x - 1][y] === 0;
+    }
+
+    function coordKey(node: Coord): string {
+      return `${node[0]},${node[1]}`;
+    }
+
+    function deepCopyGrid(grid: Grid): Grid {
+        return grid.map(row => row.slice());
+    }
+
+    function getUpperLimit(grid: Grid, CAPACITY: number): number {
+      const curr_grid = deepCopyGrid(grid);
+      let groups = 0;
+      let root: Coord = [0, 0];
+      const visited = new Set<string>();
+      while (visited.size < ROWS*COLS) {
+        groups++;
+        while (visited.has(coordKey(root))) {
+          const [x, y] = root;
+          root=[x,y+1];
+          if (isInvalid(root[0], root[1])) {
+            root = [x+1, 0];
+          }
+        }
+        let curr_weight = curr_grid[root[0]][root[1]];
+        curr_grid[root[0]][root[1]] = 0;
+        visited.add(coordKey(root));
+        
+        function dfs(node: Coord) {
+          const [x,y] = node;
+          for (const [dx, dy] of directions) {
+            const [nx, ny] = [x+dx, y+dy];
+            if (isInvalid(nx,ny))
+              continue;
+            if (!isPickable(nx,ny,curr_grid))
+              continue;
+            if (curr_grid[nx][ny] === 0)
+              continue;
+            if (curr_grid[nx][ny]+curr_weight>CAPACITY)
+              continue;
+            const n_node: Coord = [nx,ny];
+            visited.add(coordKey(n_node));
+            curr_weight+=curr_grid[nx][ny];
+            curr_grid[nx][ny]=0;
+            dfs([nx,ny]);
+            }
+        }
+        dfs(root);
+      }
+      return groups;
     }
 
     function getTopBoxInCol(col: number, curr_grid: Grid): number {
@@ -94,10 +144,6 @@ function Solve(grid: Grid, CAPACITY: number): number {
             }
         }
         return Math.ceil((total - remaining_capacity) / CAPACITY);
-    }
-
-    function deepCopyGrid(grid: Grid): Grid {
-        return grid.map(row => row.slice());
     }
 
     function encodeState(node: Coord, weight: number, grid: Grid): string {
@@ -125,8 +171,11 @@ function Solve(grid: Grid, CAPACITY: number): number {
         heap.push(cost, [[x, y], weight, alloc, curr_grid]);
     }
 
-    let final_cost = Infinity;
-    let answer: Allocation = {};
+    let final_cost = getUpperLimit(grid, CAPACITY);
+
+    if (quick_solution)
+      return final_cost;
+
     while (!heap.isEmpty()) {
       const popped = heap.pop();
       if (!popped) break;
@@ -173,7 +222,6 @@ function Solve(grid: Grid, CAPACITY: number): number {
             if (isFinished) {
                 if (next_cost < final_cost) {
                     final_cost = next_cost;
-                    answer = next_allocation;
                 }
                 continue;
             }
@@ -182,8 +230,14 @@ function Solve(grid: Grid, CAPACITY: number): number {
         }
     }
 
-    if (Object.values(answer).length === 0) return 0;
-    return Math.max(...Object.values(answer));
+    return final_cost;
 }
 
-export default Solve;
+onmessage = function (e) {
+  console.log('Worker Calculating INSIDE SOLVER')
+  const { grid, capacity } = e.data;
+  let result = Solve(grid, capacity, true);
+  postMessage([result, true]);
+  result = Solve(grid, capacity, false);
+  postMessage([result, false]);
+};

@@ -1,31 +1,13 @@
+// components/GameBoard.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "../src/app/globals.css"; // make sure this imports a file with the .shake animation class
-import Solve from "./BoardSolver";  // make sure you import your Solver
 
-const ROWS = 4;
-const COLS = 4;
-const CAPACITY = 6;
 
-function generateGrid() {
-  return Array.from({ length: ROWS }, () =>
-    Array.from({ length: COLS }, () => Math.floor(Math.random() * 4) + 1)
-  );
-}
-
-type Coord = `${number},${number}`;
-
-function coordKey(row: number, col: number): Coord {
-  return `${row},${col}`;
-}
-
-function parseCoord(key: Coord): [number, number] {
-  const [r, c] = key.split(",").map(Number);
-  return [r, c];
-}
-
-export default function GameBoard() {
+export default function GameBoard({ ROWS, COLS }: { ROWS: number, COLS: number }) {
+  console.log("Grid ", ROWS, "x", COLS)
+  const CAPACITY = 6;
   const [initialGrid, setInitialGrid] = useState<number[][] | null>(null);
   const [grid, setGrid] = useState<number[][] | null>(null);
   const [backlog, setBacklog] = useState<number[]>([]);
@@ -34,12 +16,55 @@ export default function GameBoard() {
   const [backlogActive, setBacklogActive] = useState(false); // Whether backlog sequence is active
   const [shakeSet, setShakeSet] = useState<Set<Coord>>(new Set());
   const [optimal, setOptimal] = useState<number | null>(null);
+  const [quicksol, setQuickSol] = useState<boolean | null>(null);
+  const startWorker = useSolverWorker(setOptimal, setQuickSol);
+
+  function generateGrid() {
+    return Array.from({ length: ROWS }, () =>
+      Array.from({ length: COLS }, () => Math.floor(Math.random() * 4) + 1)
+    );
+  }
+
+  type Coord = `${number},${number}`;
+
+  function coordKey(row: number, col: number): Coord {
+    return `${row},${col}`;
+  }
+
+  function parseCoord(key: Coord): [number, number] {
+    const [r, c] = key.split(",").map(Number);
+    return [r, c];
+  }
+
+function useSolverWorker(setOptimal: (n: number) => void, setQuickSol: (b: boolean) => void) {
+  const workerRef = useRef<Worker | null>(null);
+
+  const startWorker = (grid: number[][]) => {
+    workerRef.current?.terminate();
+    workerRef.current = new Worker(new URL('./BoardSolver.ts', import.meta.url));
+    workerRef.current.onmessage = (event: MessageEvent<[number, boolean]>) => {
+      const [result, quick_sol] = event.data;
+      setOptimal(result);
+      setQuickSol(quick_sol);
+    };
+    workerRef.current.postMessage({ grid, capacity: CAPACITY });
+  };
+
+  useEffect(() => {
+    return () => {
+      workerRef.current?.terminate();  // Clean up on component unmount
+    };
+  }, []);
+
+  return startWorker;
+}
+
 
   useEffect(() => {
     const g = generateGrid();
     setInitialGrid(g);
     setGrid(g);
-    setOptimal(Solve(g, CAPACITY));
+    startWorker(g);
   }, []);
 
   const isGridEmpty = () => {
@@ -199,14 +224,20 @@ export default function GameBoard() {
     setBacklogCoords(new Set());
     setTurns(0);
     setBacklogActive(false);
-    setOptimal(Solve(newGrid, CAPACITY));
+    setOptimal(null); // Reset optimal until worker provides a new one
+    setQuickSol(false);
+    
+    startWorker(newGrid);
   };
 
   if (!grid) return null; // or a loading indicator
 
   return (
     <div className="p-6 flex flex-col items-center">
-      <h1 className="text-4xl font-black mb-4 tracking-wide font-mono">UNSTACKLE</h1>
+      <h1 className="text-5xl font-black mb-4 tracking-wide font-mono hover:text-blue-600 transition-colors cursor-pointer"
+        onClick={() => window.location.reload()}>
+        UNSTACKLE
+      </h1>
       {isGridEmpty() ? (
     <>
       <p className={`text-3xl font-bold mb-4 ${turns <= (optimal ?? 0) ? 'text-green-600' : 'text-red-600'}`}>
@@ -243,30 +274,54 @@ export default function GameBoard() {
           New Game
         </button>
       </div>
+      <div className="overflow-auto max-w-full max-h-screen">
+        <div className="grid gap-2"
+        style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
+        >
+          {grid.map((row, i) =>
+            row.map((cell, j) => {
+              const key = coordKey(i, j);
+              const inBacklog = backlogCoords.has(key);
+              const isShaking = shakeSet.has(key);
 
-      <div className="grid grid-cols-4 gap-2">
-        {grid.map((row, i) =>
-          row.map((cell, j) => {
-            const key = coordKey(i, j);
-            const inBacklog = backlogCoords.has(key);
-            const isShaking = shakeSet.has(key);
-
-            return (
-              <div
-                key={key}
-                onClick={() => handleClick(i, j)}
-                className={`w-16 h-16 text-lg font-bold flex items-center justify-center border rounded select-none transition
-                  ${cell === 0 ? "bg-gray-200 text-gray-500"
-                    : inBacklog ? "bg-yellow-400 text-black"
-                    : "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"}
-                  ${isShaking ? "shake" : ""}
-                `}
-              >
-                {cell !== 0 ? cell : ""}
-              </div>
-            );
-          })
-        )}
+              return (
+                <div
+                  key={key}
+                  onClick={() => handleClick(i, j)}
+                  className={`relative border rounded select-none transition ${isShaking ? "shake" : ""}`}
+                    style={{
+                      width: `min(11vw, 64px)`,
+                      height: `min(11vw, 64px)`,
+                    }}
+                >
+                  {cell !== 0 && (
+                    <>
+                      <div
+                        className="absolute top-0 left-0 w-full h-full rounded"
+                        style={{
+                          backgroundColor: cell === 1 ? "#fccca2" :
+                                          cell === 2 ? "#e8a264" :
+                                          cell === 3 ? "#bf8552" :
+                                          "#966035"
+                        }}
+                      />
+                      {inBacklog && (
+                        <img
+                          src={`/assets/tape.png`}
+                          alt="Backlog Tape"
+                          className="absolute top-0 left-0 w-full h-full object-cover rounded"
+                        />
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center text-black font-bold text-xl">
+                        {cell}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       <div className="mt-4 space-y-1 text-center">
@@ -276,8 +331,10 @@ export default function GameBoard() {
             : "Empty"}
         </p>
         <p>Turns Taken: {turns}</p>
-        {optimal !== null && (
-        <p>Challenge: {optimal} moves</p>
+        {optimal !== null ? (
+          <p>Challenge: {optimal} moves {quicksol ? '' : '(Optimal)'}</p>
+        ) : (
+          <p>Calculating optimal moves...</p> // Indicate that it's being calculated
         )}
       </div>
       </>
