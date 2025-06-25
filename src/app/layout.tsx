@@ -13,8 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Unstacke Game",
+  title: "Unstackle Game",
   description: "A Minimalist Puzzle of Smart Moves",
+  icons: {
+    icon: 'assets/unstackle.ico',
+  },
 };
 
 export default function RootLayout({

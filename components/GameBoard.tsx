@@ -234,7 +234,7 @@ function useSolverWorker(setOptimal: (n: number) => void, setQuickSol: (b: boole
 
   return (
     <div className="p-6 flex flex-col items-center">
-      <h1 className="text-6xl font-black mb-4 tracking-wide font-mono hover:text-blue-600 transition-colors cursor-pointer"
+      <h1 className="text-5xl font-black mb-4 tracking-wide font-mono hover:text-blue-600 transition-colors cursor-pointer"
         onClick={() => window.location.reload()}>
         UNSTACKLE
       </h1>
@@ -274,49 +274,54 @@ function useSolverWorker(setOptimal: (n: number) => void, setQuickSol: (b: boole
           New Game
         </button>
       </div>
+      <div className="overflow-auto max-w-full max-h-screen">
+        <div className="grid gap-2"
+        style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
+        >
+          {grid.map((row, i) =>
+            row.map((cell, j) => {
+              const key = coordKey(i, j);
+              const inBacklog = backlogCoords.has(key);
+              const isShaking = shakeSet.has(key);
 
-      <div className="grid gap-2"
-      style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
-      >
-        {grid.map((row, i) =>
-          row.map((cell, j) => {
-            const key = coordKey(i, j);
-            const inBacklog = backlogCoords.has(key);
-            const isShaking = shakeSet.has(key);
-
-            return (
-              <div
-                key={key}
-                onClick={() => handleClick(i, j)}
-                className={`w-16 h-16 relative border rounded select-none transition ${isShaking ? "shake" : ""}`}
-              >
-                {cell !== 0 && (
-                  <>
-                    <div
-                      className="absolute top-0 left-0 w-full h-full rounded"
-                      style={{
-                        backgroundColor: cell === 1 ? "#fccca2" :
-                                        cell === 2 ? "#e8a264" :
-                                        cell === 3 ? "#bf8552" :
-                                        "#966035"
-                      }}
-                    />
-                    {inBacklog && (
-                      <img
-                        src={`/assets/tape.png`}
-                        alt="Backlog Tape"
-                        className="absolute top-0 left-0 w-full h-full object-cover rounded"
+              return (
+                <div
+                  key={key}
+                  onClick={() => handleClick(i, j)}
+                  className={`relative border rounded select-none transition ${isShaking ? "shake" : ""}`}
+                    style={{
+                      width: `min(11vw, 64px)`,
+                      height: `min(11vw, 64px)`,
+                    }}
+                >
+                  {cell !== 0 && (
+                    <>
+                      <div
+                        className="absolute top-0 left-0 w-full h-full rounded"
+                        style={{
+                          backgroundColor: cell === 1 ? "#fccca2" :
+                                          cell === 2 ? "#e8a264" :
+                                          cell === 3 ? "#bf8552" :
+                                          "#966035"
+                        }}
                       />
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center text-black font-bold text-xl">
-                      {cell}
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })
-        )}
+                      {inBacklog && (
+                        <img
+                          src={`/assets/tape.png`}
+                          alt="Backlog Tape"
+                          className="absolute top-0 left-0 w-full h-full object-cover rounded"
+                        />
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center text-black font-bold text-xl">
+                        {cell}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       <div className="mt-4 space-y-1 text-center">
